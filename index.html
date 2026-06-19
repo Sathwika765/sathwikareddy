@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TEM Code Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1F3A;--navy-mid:#162D52;--navy-light:#1E3D6B;
+  --gold:#C9A84C;--gold-light:#E8C97A;--gold-dark:#A07A2A;
+  --teal:#0D5E6E;--teal-light:#1A7A8E;--teal-pale:#0A4A57;
+  --slate:#1B2E4A;
+  --green-bg:#1A4A2A;--green-text:#7DD99A;--green-border:#2E6E42;
+  --amber-bg:#4A3200;--amber-text:#F0CC6A;--amber-border:#6E4E10;
+  --red-bg:#4A1010;--red-text:#F09090;--red-border:#6E2020;
+  --blue-bg:#0A2A5A;--blue-text:#7AB0F0;--blue-border:#1A4A8A;
+  --gray-bg:#1E2E42;--gray-text:#90A8C0;--gray-border:#2E4260;
+  --gold-bg:#3A2800;--gold-txt:#F0CC6A;--gold-bdr:#5E4010;
+  --radius:8px;--radius-lg:12px;
+  --row-h:42px;
+  --col-w:160px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--navy);color:#E0E8F0;min-height:100vh;font-size:14px;line-height:1.5}
+.layout{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:230px;background:var(--slate);flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07)}
+.sidebar-logo{padding:1.4rem 1.25rem 1rem;border-bottom:1px solid rgba(255,255,255,.07)}
+.sidebar-logo .org{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:4px}
+.sidebar-logo h2{font-size:15px;font-weight:600;color:#fff;line-height:1.25}
+.sidebar-nav{padding:.75rem 0;flex:1}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.28);text-transform:uppercase;padding:.5rem 1.25rem .25rem}
+.nav-item{display:flex;align-items:center;gap:10px;padding:.65rem 1.25rem;font-size:13px;color:rgba(255,255,255,.6);cursor:pointer;border-left:3px solid transparent;transition:all .15s}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
+.nav-item.active{color:#fff;background:rgba(201,168,76,.14);border-left-color:var(--gold)}
+.nav-item i{font-size:16px;flex-shrink:0}
+.sidebar-footer{padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,.07)}
+.sidebar-footer p{font-size:11px;color:rgba(255,255,255,.3)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topnav{background:var(--navy-mid);border-bottom:1px solid rgba(255,255,255,.07);padding:.7rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.breadcrumb{font-size:12px;color:rgba(255,255,255,.45)}
+.breadcrumb span{color:var(--gold-light);font-weight:500}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-dark);display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:12px;font-weight:700}
+.content{padding:1.4rem;flex:1;overflow-y:auto}
+
+/* TABS */
+.tab-bar{display:flex;border-bottom:2px solid rgba(255,255,255,.1);margin-bottom:1.4rem}
+.tab-btn{padding:.65rem 1.25rem;font-size:13px;font-weight:500;color:rgba(255,255,255,.5);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tab-btn:hover{color:#fff}
+.tab-btn.active{color:var(--gold-light);border-bottom-color:var(--gold)}
+.tab-btn i{font-size:15px}
+
+/* FILTER PANEL */
+.filter-panel{background:var(--navy-light);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:1.1rem 1.4rem;margin-bottom:1rem}
+.fp-header{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+.fp-header h3{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em}
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px}
+.fg label{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.09em}
+.fg select{padding:9px 32px 9px 12px;border:1px solid rgba(255,255,255,.15);border-radius:var(--radius);background:var(--navy-mid);color:#E0E8F0;font-size:13px;width:100%;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C9A84C' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .15s}
+.fg select:focus{outline:none;border-color:var(--gold)}
+.fg select:disabled{opacity:.35;cursor:not-allowed}
+.fg select.filled{border-color:var(--gold);color:#fff}
+
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;transition:all .15s}
+.btn:active{transform:scale(.98)}
+.btn-gold{background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:700}
+.btn-gold:hover{background:var(--gold-light)}
+.btn-teal{background:var(--teal);color:#E0F4F8;border-color:var(--teal-light)}
+.btn-teal:hover{background:var(--teal-light)}
+.btn-outline{background:transparent;color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)}
+.btn-outline:hover{border-color:rgba(255,255,255,.4);color:#fff;background:rgba(255,255,255,.05)}
+.btn-ghost{background:transparent;color:rgba(255,255,255,.5);border-color:transparent;padding:6px 10px}
+.btn-ghost:hover{background:rgba(255,255,255,.08);color:#fff}
+.btn-danger-ghost{background:transparent;color:var(--red-text);border:none;padding:5px 8px;border-radius:var(--radius);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:4px}
+.btn-danger-ghost:hover{background:var(--red-bg)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-green{background:#0F4A20;color:#7DD99A;border-color:#1A6B30;font-weight:600}
+.btn-green:hover{background:#1A6B30}
+.btn-purple{background:#2A1A5E;color:#C0A8F0;border-color:#3A2A7A;font-weight:600}
+.btn-purple:hover{background:#3A2A7A}
+
+/* SUMMARY CARDS */
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1rem}
+.s-card{background:var(--navy-light);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:.9rem 1.1rem;border-top:3px solid rgba(255,255,255,.15)}
+.s-card.c-total{border-top-color:var(--gold)}.s-card.c-active{border-top-color:var(--green-text)}
+.s-card.c-done{border-top-color:var(--blue-text)}.s-card.c-hold{border-top-color:var(--amber-text)}
+.s-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.s-val{font-size:26px;font-weight:700;color:#fff}
+.s-card.c-active .s-val{color:var(--green-text)}.s-card.c-done .s-val{color:var(--blue-text)}
+.s-card.c-hold .s-val{color:var(--amber-text)}.s-card.c-total .s-val{color:var(--gold-light)}
+
+/* IMPORT/EXPORT BAR */
+.ie-bar{display:flex;align-items:center;gap:8px;background:var(--navy-light);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:.7rem 1.1rem;margin-bottom:.75rem;flex-wrap:wrap}
+.ie-bar-label{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+.ie-divider{width:1px;height:22px;background:rgba(255,255,255,.12);margin:0 2px}
+
+/* CELL SIZE CONTROLS */
+.cell-size-bar{display:flex;align-items:center;gap:12px;background:var(--teal-pale);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-lg);padding:.65rem 1.1rem;margin-bottom:.75rem;flex-wrap:wrap}
+.cell-size-bar label{font-size:11px;font-weight:700;color:var(--gold-light);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.sz-group{display:flex;align-items:center;gap:8px}
+.sz-group span{font-size:11px;color:rgba(255,255,255,.55);min-width:60px}
+.sz-slider{-webkit-appearance:none;appearance:none;width:110px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);outline:none;cursor:pointer}
+.sz-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid var(--navy)}
+.sz-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid var(--navy)}
+.sz-val{font-size:11px;font-weight:600;color:var(--gold-light);min-width:30px}
+
+/* TOOLBAR */
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem;flex-wrap:wrap;gap:8px}
+.result-pill{font-size:12px;color:var(--gold-light);background:var(--gold-bg);border:1px solid var(--gold-bdr);border-radius:20px;padding:3px 12px;font-weight:600}
+
+/* TABLE */
+.table-card{background:var(--navy-mid);border:1px solid rgba(255,255,255,.09);border-radius:var(--radius-lg);overflow:auto;position:relative}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+thead{position:sticky;top:0;z-index:10}
+thead tr{background:var(--teal)}
+th{text-align:left;font-weight:700;color:#E0F4F8;font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-right:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden;padding:0;height:var(--row-h)}
+th:last-child{border-right:none;width:70px!important}
+.th-content{display:flex;align-items:center;padding:0 10px;height:100%}
+td{border-bottom:1px solid rgba(255,255,255,.06);color:#C8D8EC;vertical-align:middle;border-right:1px solid rgba(255,255,255,.05);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 14px;height:var(--row-h)}
+td:last-child{border-right:none}
+td.label-cell{font-weight:700;color:#fff;font-size:13px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(255,255,255,.04)}
+tbody tr:nth-child(even) td{background:rgba(255,255,255,.025)}
+tbody tr:nth-child(even):hover td{background:rgba(255,255,255,.05)}
+
+/* COL RESIZE HANDLE */
+.col-resize{position:absolute;right:0;top:0;width:6px;height:100%;cursor:col-resize;background:transparent;z-index:5;user-select:none}
+.col-resize:hover,.col-resize.dragging{background:var(--gold);opacity:.6}
+
+/* EDITABLE COL NAME */
+.col-name-input{background:transparent;border:none;color:#E0F4F8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;width:calc(100% - 16px);padding:0;cursor:text;outline:none}
+.col-name-input:focus{outline:1px dashed rgba(255,255,255,.4);border-radius:2px;background:rgba(255,255,255,.08);padding:1px 4px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.badge-green{background:var(--green-bg);color:var(--green-text);border-color:var(--green-border)}.badge-green::before{background:var(--green-text)}
+.badge-amber{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber-border)}.badge-amber::before{background:var(--amber-text)}
+.badge-blue{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue-border)}.badge-blue::before{background:var(--blue-text)}
+.badge-red{background:var(--red-bg);color:var(--red-text);border-color:var(--red-border)}.badge-red::before{background:var(--red-text)}
+.badge-gray{background:var(--gray-bg);color:var(--gray-text);border-color:var(--gray-border)}.badge-gray::before{background:var(--gray-text)}
+.badge-gold{background:var(--gold-bg);color:var(--gold-txt);border-color:var(--gold-bdr)}.badge-gold::before{background:var(--gold-txt)}
+
+/* EMPTY */
+.empty-state{padding:3rem;text-align:center;color:rgba(255,255,255,.35)}
+.empty-icon{width:52px;height:52px;border-radius:50%;background:var(--navy-light);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.empty-icon i{font-size:24px;color:rgba(255,255,255,.3)}
+.empty-state h4{font-size:15px;font-weight:600;color:rgba(255,255,255,.6);margin-bottom:4px}
+.empty-state p{font-size:13px}
+
+/* ADD ROW PANEL */
+.add-panel{background:var(--teal-pale);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:.75rem;display:none}
+.add-panel.open{display:block}
+.add-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.add-panel-header h3{font-size:13px;font-weight:700;color:var(--gold-light);display:flex;align-items:center;gap:6px}
+.modal-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;margin-bottom:12px}
+.modal-field{display:flex;flex-direction:column;gap:4px}
+.modal-field label{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.07em}
+.modal-field input,.modal-field select{padding:8px 10px;border:1px solid rgba(255,255,255,.18);border-radius:var(--radius);background:var(--navy-mid);color:#E0E8F0;font-size:13px;width:100%}
+.modal-field input:focus,.modal-field select:focus{outline:none;border-color:var(--gold)}
+.modal-actions{display:flex;gap:8px}
+
+/* DROP ZONE */
+.drop-zone{border:2px dashed rgba(255,255,255,.18);border-radius:var(--radius-lg);padding:1.5rem;text-align:center;color:rgba(255,255,255,.4);font-size:13px;margin-bottom:.75rem;cursor:pointer;transition:all .2s;display:none}
+.drop-zone.open{display:block}
+.drop-zone.drag-over{border-color:var(--gold);color:var(--gold-light);background:rgba(201,168,76,.06)}
+.drop-zone i{font-size:28px;display:block;margin-bottom:8px;opacity:.6}
+.import-preview{background:var(--navy-mid);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:.75rem;display:none}
+.import-preview.open{display:block}
+.import-preview h4{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.import-actions{display:flex;gap:8px;margin-top:8px}
+
+/* ADMIN */
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:700px){.admin-grid{grid-template-columns:1fr}}
+.admin-card{background:var(--navy-light);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:1.25rem}
+.admin-card-full{grid-column:1/-1}
+.admin-card h3{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:6px}
+.admin-card h3 i{font-size:15px}
+.admin-input-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.admin-input-row input,.admin-input-row select{flex:1;min-width:100px;padding:8px 10px;border:1px solid rgba(255,255,255,.15);border-radius:var(--radius);background:var(--navy-mid);color:#E0E8F0;font-size:13px}
+.admin-input-row input:focus,.admin-input-row select:focus{outline:none;border-color:var(--gold);background:var(--navy)}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;min-height:32px}
+.tag-item{display:flex;align-items:center;gap:4px;background:var(--teal);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 8px 4px 12px;font-size:12px;color:#E0F4F8;font-weight:500}
+.tag-item button{background:rgba(255,255,255,.15);border:none;cursor:pointer;color:#E0F4F8;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.tag-item button:hover{background:var(--red-bg);color:var(--red-text)}
+.col-list{display:flex;flex-direction:column;gap:6px}
+.col-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);background:var(--navy-mid);font-size:13px}
+.col-row .cn{font-weight:600;color:#E0E8F0}
+.col-row .ct{font-size:11px;color:rgba(255,255,255,.35);margin-left:5px;background:rgba(255,255,255,.07);padding:1px 7px;border-radius:20px}
+.help{font-size:12px;color:rgba(255,255,255,.3);font-style:italic;padding:6px 0}
+
+/* SUB-SUB CATEGORY TREE */
+.subcat-tree{margin-top:10px}
+.subcat-node{margin-bottom:6px}
+.subcat-node-header{display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,255,255,.05);border-radius:var(--radius);border:1px solid rgba(255,255,255,.08)}
+.subcat-node-label{font-size:12px;font-weight:600;color:#E0F4F8;flex:1}
+.subcat-node-toggle{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:14px;padding:0 4px}
+.subcat-node-toggle:hover{color:#fff}
+.subsub-list{margin-left:16px;margin-top:4px;display:flex;flex-direction:column;gap:4px}
+.subsub-item{display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;font-size:12px;color:#90A8C0}
+.subsub-add-row{display:flex;gap:6px;margin-left:16px;margin-top:4px}
+.subsub-add-row input{flex:1;padding:5px 8px;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:var(--navy-mid);color:#E0E8F0;font-size:12px}
+.subsub-add-row input:focus{outline:none;border-color:var(--gold)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--teal);color:#E0F4F8;border:1px solid rgba(255,255,255,.15);border-radius:var(--radius-lg);padding:.75rem 1.25rem;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;z-index:9999;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.error{background:var(--red-bg);color:var(--red-text);border-color:var(--red-border)}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="org">Enterprise</div>
+    <h2>TEM Code Dashboard</h2>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" onclick="switchTab('view')"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+    <div class="nav-item" onclick="switchTab('admin')"><i class="ti ti-adjustments"></i> Admin Panel</div>
+    <div class="nav-label" style="margin-top:.75rem">Reports</div>
+    <div class="nav-item"><i class="ti ti-chart-bar"></i> Analytics</div>
+    <div class="nav-item"><i class="ti ti-file-export"></i> Export</div>
+  </nav>
+  <div class="sidebar-footer"><p>v3.0 &bull; TEM System</p></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topnav">
+    <div style="display:flex;align-items:center;gap:10px">
+      <i class="ti ti-layout-dashboard" style="font-size:17px;color:var(--gold)"></i>
+      <div class="breadcrumb">TEM System &rsaquo; <span id="bc">Dashboard</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:12px;color:rgba(255,255,255,.4)" id="filter-status-bar"></span>
+      <div class="avatar">AD</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="tab-bar">
+      <button class="tab-btn active" id="btn-view" onclick="switchTab('view')"><i class="ti ti-table"></i> Data View</button>
+      <button class="tab-btn" id="btn-admin" onclick="switchTab('admin')"><i class="ti ti-adjustments"></i> Admin</button>
+    </div>
+
+    <!-- VIEW TAB -->
+    <div id="view-tab">
+
+      <!-- FILTER PANEL -->
+      <div class="filter-panel">
+        <div class="fp-header"><i class="ti ti-filter" style="font-size:15px;color:var(--gold)"></i><h3>Filter Records</h3></div>
+        <div class="filter-row">
+          <div class="fg"><label>Work Type</label>
+            <select id="worktype-sel" onchange="onWorkTypeChange()"><option value="">— Select work type —</option></select>
+          </div>
+          <div class="fg"><label>Sub Category</label>
+            <select id="subcat-sel" onchange="onSubCatChange()" disabled><option value="">— Select sub category —</option></select>
+          </div>
+          <div class="fg" id="subsub-fg" style="display:none"><label>Sub-Sub Category</label>
+            <select id="subsub-sel" onchange="onSubSubCatChange()" disabled><option value="">— Select sub-sub category —</option></select>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px">
+            <button class="btn btn-outline" onclick="clearFilters()"><i class="ti ti-refresh"></i> Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="summary-row" id="summary-row" style="display:none"></div>
+
+      <!-- IMPORT/EXPORT BAR -->
+      <div class="ie-bar">
+        <span class="ie-bar-label"><i class="ti ti-file-spreadsheet" style="font-size:14px;vertical-align:-2px;margin-right:3px"></i>Excel</span>
+        <button class="btn btn-green btn-sm" onclick="exportExcel()"><i class="ti ti-download"></i> Export All</button>
+        <button class="btn btn-green btn-sm" onclick="exportCurrentView()"><i class="ti ti-download"></i> Export View</button>
+        <div class="ie-divider"></div>
+        <button class="btn btn-purple btn-sm" onclick="toggleDropZone()"><i class="ti ti-upload"></i> Import Excel</button>
+        <span style="font-size:11px;color:rgba(255,255,255,.3)">.xlsx / .csv</span>
+        <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(event)"/>
+      </div>
+
+      <!-- DROP ZONE -->
+      <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)" onclick="document.getElementById('import-file-input').click()">
+        <i class="ti ti-file-upload"></i>
+        <div><strong>Drop Excel / CSV file here</strong></div>
+        <div style="font-size:12px;margin-top:4px">or click to browse</div>
+      </div>
+      <div class="import-preview" id="import-preview">
+        <h4><i class="ti ti-eye" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>Import Preview</h4>
+        <div id="import-info" style="font-size:13px;color:rgba(255,255,255,.6)"></div>
+        <div class="import-actions">
+          <button class="btn btn-purple btn-sm" onclick="confirmImport('replace')"><i class="ti ti-replace"></i> Replace All</button>
+          <button class="btn btn-teal btn-sm" onclick="confirmImport('append')"><i class="ti ti-playlist-add"></i> Append</button>
+          <button class="btn btn-outline btn-sm" onclick="cancelImport()"><i class="ti ti-x"></i> Cancel</button>
+        </div>
+      </div>
+
+      <!-- CELL SIZE CONTROLS -->
+      <div class="cell-size-bar">
+        <label><i class="ti ti-resize" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Cell Size</label>
+        <div class="sz-group">
+          <span>Row Height</span>
+          <input type="range" class="sz-slider" id="row-h-slider" min="28" max="90" value="42" oninput="updateRowHeight(this.value)"/>
+          <span class="sz-val" id="row-h-val">42px</span>
+        </div>
+        <div class="sz-group">
+          <span>Col Width</span>
+          <input type="range" class="sz-slider" id="col-w-slider" min="80" max="320" value="160" oninput="updateColWidth(this.value)"/>
+          <span class="sz-val" id="col-w-val">160px</span>
+        </div>
+        <div class="sz-group">
+          <span>Font Size</span>
+          <input type="range" class="sz-slider" id="font-slider" min="10" max="18" value="13" oninput="updateFontSize(this.value)"/>
+          <span class="sz-val" id="font-val">13px</span>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="resetSizes()"><i class="ti ti-refresh"></i> Reset</button>
+      </div>
+
+      <!-- TOOLBAR -->
+      <div class="table-toolbar">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="result-pill" id="result-count">0 records</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.3)">Click header to rename · Drag edge to resize column</span>
+        </div>
+        <button class="btn btn-gold" onclick="openAddRow()"><i class="ti ti-plus"></i> Add Row</button>
+      </div>
+
+      <!-- ADD ROW PANEL -->
+      <div class="add-panel" id="add-panel">
+        <div class="add-panel-header">
+          <h3><i class="ti ti-circle-plus" style="font-size:16px"></i> Add New Record</h3>
+          <button class="btn btn-ghost" onclick="closeAddRow()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal-fields" id="modal-fields"></div>
+        <div class="modal-actions">
+          <button class="btn btn-gold" onclick="saveNewRow()"><i class="ti ti-check"></i> Save Record</button>
+          <button class="btn btn-outline" onclick="closeAddRow()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-card" id="table-card">
+        <table id="data-table">
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div id="admin-tab" style="display:none">
+      <div class="admin-grid">
+
+        <div class="admin-card">
+          <h3><i class="ti ti-list"></i> Work Types</h3>
+          <div class="admin-input-row">
+            <input id="new-worktype" placeholder="Add work type…" onkeydown="if(event.key==='Enter')addWorkType()"/>
+            <button class="btn btn-teal btn-sm" onclick="addWorkType()"><i class="ti ti-plus"></i> Add</button>
+          </div>
+          <div class="tag-list" id="worktype-tag-list"></div>
+        </div>
+
+        <div class="admin-card">
+          <h3><i class="ti ti-columns"></i> Columns</h3>
+          <div class="admin-input-row">
+            <input id="new-col-label" placeholder="Column label…" onkeydown="if(event.key==='Enter')addColumn()"/>
+            <select id="new-col-type" style="flex:0 0 auto;width:120px">
+              <option value="text">Text</option>
+              <option value="badge">Badge/Status</option>
+              <option value="date">Date</option>
+              <option value="number">Number</option>
+            </select>
+            <button class="btn btn-teal btn-sm" onclick="addColumn()"><i class="ti ti-plus"></i> Add</button>
+          </div>
+          <div class="col-list" id="col-list"></div>
+        </div>
+
+        <div class="admin-card admin-card-full">
+          <h3><i class="ti ti-sitemap"></i> Sub Categories &amp; Sub-Sub Categories</h3>
+          <div class="admin-input-row" style="margin-bottom:12px">
+            <select id="subcat-wt-sel" style="flex:0 0 auto;max-width:150px" onchange="renderSubCatTree()">
+              <option value="">Work type…</option>
+            </select>
+            <input id="new-subcat" placeholder="New sub category…" onkeydown="if(event.key==='Enter')addSubCat()"/>
+            <button class="btn btn-teal btn-sm" onclick="addSubCat()"><i class="ti ti-plus"></i> Add Sub Cat</button>
+          </div>
+          <div id="subcat-tree-container">
+            <span class="help">Select a work type above to manage its hierarchy.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+const BADGE_MAP={"Active":"badge-green","Completed":"badge-green","In Progress":"badge-blue","Pending":"badge-amber","On Hold":"badge-gray","Cancelled":"badge-red","High":"badge-red","Medium":"badge-amber","Low":"badge-green","Critical":"badge-red","Normal":"badge-gold"};
+const BADGE_OPTS=["","Active","In Progress","Pending","Completed","On Hold","Cancelled","High","Medium","Low","Critical","Normal"];
+
+/* ── STATE ── */
+let S={
+  workTypes:["Development","Testing","Deployment","Support"],
+  // subCats: { workType: { subCatName: [subSubCat, ...] } }
+  subCats:{
+    "Development":{
+      "Frontend":["React","Vue","Angular","CSS"],
+      "Backend":["Node.js","Python","Java"],
+      "Database":["PostgreSQL","MongoDB","Redis"],
+      "API":["REST","GraphQL","gRPC"]
+    },
+    "Testing":{
+      "Unit Tests":["Jest","Mocha","JUnit"],
+      "Integration":["Postman","Cypress"],
+      "UAT":["User Stories","Acceptance Criteria"],
+      "Performance":["JMeter","k6"]
+    },
+    "Deployment":{
+      "Staging":["Pre-prod","QA env"],
+      "Production":["Blue-Green","Canary"],
+      "Rollback":["Hotfix","Version revert"]
+    },
+    "Support":{
+      "L1":["Password Reset","Basic Queries"],
+      "L2":["Technical Issues","Escalated"],
+      "L3":["DB Issues","Critical Bugs"],
+      "Escalation":["Management","External Vendor"]
+    }
+  },
+  columns:[
+    {id:"label",label:"Label / Template",type:"text"},
+    {id:"tem_code",label:"TEM Code",type:"text"},
+    {id:"status",label:"Status",type:"badge"},
+    {id:"assignee",label:"Assignee",type:"text"},
+    {id:"due_date",label:"Due Date",type:"date"},
+    {id:"priority",label:"Priority",type:"badge"},
+    {id:"remarks",label:"Remarks",type:"text"}
+  ],
+  rows:[
+    {label:"Project Kick-off Template",tem_code:"TEM-001",workType:"Development",subCat:"Frontend",subSubCat:"React",status:"Active",assignee:"Arjun K.",due_date:"2026-07-01",priority:"High",remarks:"UI redesign phase"},
+    {label:"React Component Library",tem_code:"TEM-002",workType:"Development",subCat:"Frontend",subSubCat:"React",status:"In Progress",assignee:"Meera J.",due_date:"2026-07-08",priority:"Medium",remarks:"Shared UI components"},
+    {label:"Vue Dashboard Template",tem_code:"TEM-003",workType:"Development",subCat:"Frontend",subSubCat:"Vue",status:"Pending",assignee:"Raj S.",due_date:"2026-07-15",priority:"Low",remarks:"Admin dashboard"},
+    {label:"API Integration Template",tem_code:"TEM-004",workType:"Development",subCat:"API",subSubCat:"REST",status:"In Progress",assignee:"Sneha R.",due_date:"2026-07-10",priority:"Medium",remarks:"REST endpoints"},
+    {label:"GraphQL Schema Template",tem_code:"TEM-005",workType:"Development",subCat:"API",subSubCat:"GraphQL",status:"Pending",assignee:"Kiran T.",due_date:"2026-07-18",priority:"Low",remarks:"Schema design"},
+    {label:"DB Migration Template",tem_code:"TEM-006",workType:"Development",subCat:"Database",subSubCat:"PostgreSQL",status:"Pending",assignee:"Rohit M.",due_date:"2026-07-20",priority:"Low",remarks:"Schema update"},
+    {label:"DB Backup Procedure",tem_code:"TEM-007",workType:"Development",subCat:"Database",subSubCat:"MongoDB",status:"Active",assignee:"Divya N.",due_date:"2026-07-12",priority:"High",remarks:"Nightly backup"},
+    {label:"Backend Auth Template",tem_code:"TEM-008",workType:"Development",subCat:"Backend",subSubCat:"Node.js",status:"Active",assignee:"Vijay P.",due_date:"2026-07-18",priority:"High",remarks:"JWT implementation"},
+    {label:"Unit Test Suite",tem_code:"TEM-009",workType:"Testing",subCat:"Unit Tests",subSubCat:"Jest",status:"Active",assignee:"Priya S.",due_date:"2026-06-30",priority:"High",remarks:"Coverage 80%+"},
+    {label:"Unit Test Regression",tem_code:"TEM-010",workType:"Testing",subCat:"Unit Tests",subSubCat:"JUnit",status:"Completed",assignee:"Arun V.",due_date:"2026-06-25",priority:"Medium",remarks:"All modules done"},
+    {label:"UAT Checklist",tem_code:"TEM-011",workType:"Testing",subCat:"UAT",subSubCat:"User Stories",status:"Completed",assignee:"Kiran T.",due_date:"2026-06-25",priority:"Medium",remarks:"Client sign-off"},
+    {label:"UAT Sign-off Template",tem_code:"TEM-012",workType:"Testing",subCat:"UAT",subSubCat:"Acceptance Criteria",status:"In Progress",assignee:"Nisha K.",due_date:"2026-07-05",priority:"High",remarks:"Business approval"},
+    {label:"Prod Deploy Template",tem_code:"TEM-013",workType:"Deployment",subCat:"Production",subSubCat:"Blue-Green",status:"On Hold",assignee:"Arun V.",due_date:"2026-07-15",priority:"High",remarks:"Awaiting approval"},
+    {label:"Canary Release Plan",tem_code:"TEM-014",workType:"Deployment",subCat:"Production",subSubCat:"Canary",status:"Active",assignee:"Sneha R.",due_date:"2026-07-22",priority:"Critical",remarks:"5% traffic rollout"},
+    {label:"Staging Deploy Checklist",tem_code:"TEM-015",workType:"Deployment",subCat:"Staging",subSubCat:"Pre-prod",status:"Completed",assignee:"Vijay P.",due_date:"2026-06-28",priority:"Low",remarks:"Pre-prod validation"},
+    {label:"L2 Escalation Template",tem_code:"TEM-016",workType:"Support",subCat:"L2",subSubCat:"Escalated",status:"Active",assignee:"Divya N.",due_date:"2026-07-05",priority:"Medium",remarks:"SLA 4hr"},
+    {label:"L3 Support Template",tem_code:"TEM-017",workType:"Support",subCat:"L3",subSubCat:"DB Issues",status:"Pending",assignee:"Nisha K.",due_date:"2026-07-18",priority:"Medium",remarks:"DB issues"},
+    {label:"L1 First Response",tem_code:"TEM-018",workType:"Support",subCat:"L1",subSubCat:"Basic Queries",status:"Active",assignee:"Rohit M.",due_date:"2026-07-02",priority:"Low",remarks:"1hr SLA"},
+  ],
+  selectedWorkType:"",selectedSubCat:"",selectedSubSubCat:"",
+  colWidths:{},
+  rowHeight:42,fontSize:13
+};
+
+/* ── TAB ── */
+function switchTab(t){
+  document.getElementById("view-tab").style.display=t==="view"?"block":"none";
+  document.getElementById("admin-tab").style.display=t==="admin"?"block":"none";
+  document.getElementById("btn-view").classList.toggle("active",t==="view");
+  document.getElementById("btn-admin").classList.toggle("active",t==="admin");
+  document.getElementById("bc").textContent=t==="view"?"Dashboard":"Admin Panel";
+  document.querySelectorAll(".nav-item").forEach((n,i)=>n.classList.toggle("active",(i===0&&t==="view")||(i===1&&t==="admin")));
+  if(t==="admin")renderAdmin();
+}
+
+/* ── FILTER DROPDOWNS ── */
+function getSubCatNames(wt){return Object.keys(S.subCats[wt]||{});}
+function getSubSubCatNames(wt,sc){return(S.subCats[wt]||{})[sc]||[];}
+
+function renderWorkTypeSel(){
+  const s=document.getElementById("worktype-sel"),cur=s.value;
+  s.innerHTML='<option value="">— Select work type —</option>';
+  S.workTypes.forEach(w=>{const o=document.createElement("option");o.value=w;o.textContent=w;if(w===cur)o.selected=true;s.appendChild(o);});
+  s.classList.toggle("filled",!!cur);
+}
+
+function renderSubCatSel(wt){
+  const s=document.getElementById("subcat-sel");
+  s.innerHTML='<option value="">— Select sub category —</option>';
+  if(!wt){s.disabled=true;s.classList.remove("filled");hideSubSubFg();return;}
+  s.disabled=false;
+  getSubCatNames(wt).forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;s.appendChild(o);});
+}
+
+function renderSubSubCatSel(wt,sc){
+  const fg=document.getElementById("subsub-fg");
+  const s=document.getElementById("subsub-sel");
+  const subs=getSubSubCatNames(wt,sc);
+  if(!sc||!subs.length){hideSubSubFg();return;}
+  fg.style.display="flex";
+  s.innerHTML='<option value="">— All sub-sub categories —</option>';
+  s.disabled=false;
+  subs.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;s.appendChild(o);});
+  s.classList.toggle("filled",!!S.selectedSubSubCat);
+}
+
+function hideSubSubFg(){
+  document.getElementById("subsub-fg").style.display="none";
+  document.getElementById("subsub-sel").value="";
+  S.selectedSubSubCat="";
+}
+
+function onWorkTypeChange(){
+  S.selectedWorkType=document.getElementById("worktype-sel").value;
+  S.selectedSubCat="";S.selectedSubSubCat="";
+  document.getElementById("worktype-sel").classList.toggle("filled",!!S.selectedWorkType);
+  renderSubCatSel(S.selectedWorkType);
+  document.getElementById("subcat-sel").value="";
+  hideSubSubFg();
+  updateFilterStatus();renderTable();
+}
+
+function onSubCatChange(){
+  S.selectedSubCat=document.getElementById("subcat-sel").value;
+  S.selectedSubSubCat="";
+  document.getElementById("subcat-sel").classList.toggle("filled",!!S.selectedSubCat);
+  renderSubSubCatSel(S.selectedWorkType,S.selectedSubCat);
+  updateFilterStatus();renderTable();
+}
+
+function onSubSubCatChange(){
+  S.selectedSubSubCat=document.getElementById("subsub-sel").value;
+  document.getElementById("subsub-sel").classList.toggle("filled",!!S.selectedSubSubCat);
+  updateFilterStatus();renderTable();
+}
+
+function clearFilters(){
+  S.selectedWorkType="";S.selectedSubCat="";S.selectedSubSubCat="";
+  document.getElementById("worktype-sel").value="";
+  document.getElementById("worktype-sel").classList.remove("filled");
+  renderSubCatSel("");
+  hideSubSubFg();
+  updateFilterStatus();renderTable();
+}
+
+function updateFilterStatus(){
+  const bar=document.getElementById("filter-status-bar");
+  const parts=[S.selectedWorkType,S.selectedSubCat,S.selectedSubSubCat].filter(Boolean);
+  bar.textContent=parts.join(" › ");
+}
+
+/* ── TABLE ── */
+function getFiltered(){
+  return S.rows.filter(r=>{
+    if(S.selectedWorkType&&r.workType!==S.selectedWorkType)return false;
+    if(S.selectedSubCat&&r.subCat!==S.selectedSubCat)return false;
+    if(S.selectedSubSubCat&&r.subSubCat!==S.selectedSubSubCat)return false;
+    return true;
+  });
+}
+
+function renderSummary(rows){
+  const bar=document.getElementById("summary-row");
+  if(!S.selectedSubCat){bar.style.display="none";return;}
+  bar.style.display="grid";
+  bar.innerHTML=`
+    <div class="s-card c-total"><div class="s-lbl">Total</div><div class="s-val">${rows.length}</div></div>
+    <div class="s-card c-active"><div class="s-lbl">Active/In Progress</div><div class="s-val">${rows.filter(r=>["Active","In Progress"].includes(r.status)).length}</div></div>
+    <div class="s-card c-done"><div class="s-lbl">Completed</div><div class="s-val">${rows.filter(r=>r.status==="Completed").length}</div></div>
+    <div class="s-card c-hold"><div class="s-lbl">Pending/On Hold</div><div class="s-val">${rows.filter(r=>["On Hold","Pending"].includes(r.status)).length}</div></div>
+  `;
+}
+
+function getColW(idx){return S.colWidths[idx]||(S.colWidth||160);}
+
+function renderTable(){
+  const rows=getFiltered();
+  renderSummary(rows);
+  document.getElementById("result-count").textContent=rows.length+" record"+(rows.length!==1?"s":"");
+  const head=document.getElementById("table-head");
+  const body=document.getElementById("table-body");
+  const rh=S.rowHeight+"px";
+  const fs=S.fontSize+"px";
+
+  head.innerHTML=`<tr style="height:${rh}">
+    ${S.columns.map((c,i)=>`
+      <th style="width:${getColW(i)}px;font-size:${fs}">
+        <div class="th-content">
+          <input class="col-name-input" value="${c.label}" onchange="renameCol(${i},this.value)" onclick="this.select()" title="Click to rename"/>
+        </div>
+        <div class="col-resize" onmousedown="startColResize(event,${i})" title="Drag to resize"></div>
+      </th>`).join("")}
+    <th style="width:70px;font-size:${fs}"><div class="th-content">Actions</div></th>
+  </tr>`;
+
+  if(!rows.length){
+    const msg=!S.selectedWorkType?"Select a work type":!S.selectedSubCat?"Select a sub category":"No records found";
+    const sub=!S.selectedWorkType?"Choose a work type from the filter.":!S.selectedSubCat?"Choose a sub category to load records.":"No TEM codes exist for this selection.";
+    body.innerHTML=`<tr><td colspan="${S.columns.length+1}"><div class="empty-state"><div class="empty-icon"><i class="ti ti-database-off"></i></div><h4>${msg}</h4><p>${sub}</p></div></td></tr>`;
+    return;
+  }
+
+  body.innerHTML=rows.map(r=>{
+    const gi=S.rows.indexOf(r);
+    return`<tr style="height:${rh}">
+      ${S.columns.map((c,ci)=>{
+        const v=r[c.id]!==undefined&&r[c.id]!==""?r[c.id]:"—";
+        const w=getColW(ci);
+        if(ci===0)return`<td class="label-cell" style="width:${w}px;font-size:${fs}">${v}</td>`;
+        if(c.type==="badge"){const cls=BADGE_MAP[v]||"badge-gray";return`<td style="width:${w}px;font-size:${fs}"><span class="badge ${cls}">${v}</span></td>`;}
+        return`<td style="width:${w}px;font-size:${fs}">${v}</td>`;
+      }).join("")}
+      <td style="width:70px;font-size:${fs}">
+        <button class="btn-danger-ghost" onclick="deleteRow(${gi})" aria-label="Delete"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function renameCol(idx,v){S.columns[idx].label=v.trim()||S.columns[idx].label;renderAdminCols();}
+function deleteRow(i){if(confirm("Delete this record?"))S.rows.splice(i,1);renderTable();}
+
+/* ── COLUMN RESIZE (drag) ── */
+let _colResize=null;
+function startColResize(e,idx){
+  e.preventDefault();
+  const startX=e.clientX;
+  const startW=getColW(idx);
+  _colResize={idx,startX,startW};
+  const handle=e.target;handle.classList.add("dragging");
+  function onMove(ev){
+    const diff=ev.clientX-_colResize.startX;
+    S.colWidths[_colResize.idx]=Math.max(60,_colResize.startW+diff);
+    renderTable();
+  }
+  function onUp(){
+    handle.classList.remove("dragging");
+    document.removeEventListener("mousemove",onMove);
+    document.removeEventListener("mouseup",onUp);
+    _colResize=null;
+  }
+  document.addEventListener("mousemove",onMove);
+  document.addEventListener("mouseup",onUp);
+}
+
+/* ── CELL SIZE CONTROLS ── */
+function updateRowHeight(v){
+  S.rowHeight=parseInt(v);
+  document.getElementById("row-h-val").textContent=v+"px";
+  document.documentElement.style.setProperty("--row-h",v+"px");
+  renderTable();
+}
+function updateColWidth(v){
+  S.colWidth=parseInt(v);
+  S.colWidths={};
+  document.getElementById("col-w-val").textContent=v+"px";
+  renderTable();
+}
+function updateFontSize(v){
+  S.fontSize=parseInt(v);
+  document.getElementById("font-val").textContent=v+"px";
+  renderTable();
+}
+function resetSizes(){
+  S.rowHeight=42;S.colWidth=160;S.fontSize=13;S.colWidths={};
+  document.getElementById("row-h-slider").value=42;
+  document.getElementById("col-w-slider").value=160;
+  document.getElementById("font-slider").value=13;
+  document.getElementById("row-h-val").textContent="42px";
+  document.getElementById("col-w-val").textContent="160px";
+  document.getElementById("font-val").textContent="13px";
+  document.documentElement.style.setProperty("--row-h","42px");
+  renderTable();
+}
+
+/* ── ADD ROW ── */
+function openAddRow(){
+  const p=document.getElementById("add-panel"),f=document.getElementById("modal-fields");
+  f.innerHTML=S.columns.map(c=>`
+    <div class="modal-field"><label>${c.label}</label>
+      ${c.type==="badge"
+        ?`<select id="mf-${c.id}">${BADGE_OPTS.map(v=>`<option value="${v}">${v||"Select…"}</option>`).join("")}</select>`
+        :`<input id="mf-${c.id}" type="${c.type==="date"?"date":c.type==="number"?"number":"text"}" placeholder="${c.label}…"/>`
+      }
+    </div>`).join("")+`
+    <div class="modal-field"><label>Work Type</label>
+      <select id="mf-workType" onchange="updateModalSubCat()">
+        <option value="">Select…</option>
+        ${S.workTypes.map(w=>`<option value="${w}">${w}</option>`).join("")}
+      </select>
+    </div>
+    <div class="modal-field"><label>Sub Category</label>
+      <select id="mf-subCat" onchange="updateModalSubSubCat()"><option value="">Select…</option></select>
+    </div>
+    <div class="modal-field" id="mf-subsub-field" style="display:none"><label>Sub-Sub Category</label>
+      <select id="mf-subSubCat"><option value="">Select…</option></select>
+    </div>`;
+  p.classList.add("open");
+  p.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function updateModalSubCat(){
+  const wt=document.getElementById("mf-workType").value;
+  const s=document.getElementById("mf-subCat");
+  s.innerHTML='<option value="">Select…</option>'+getSubCatNames(wt).map(c=>`<option>${c}</option>`).join("");
+  document.getElementById("mf-subsub-field").style.display="none";
+}
+function updateModalSubSubCat(){
+  const wt=document.getElementById("mf-workType").value;
+  const sc=document.getElementById("mf-subCat").value;
+  const subs=getSubSubCatNames(wt,sc);
+  const field=document.getElementById("mf-subsub-field");
+  const s=document.getElementById("mf-subSubCat");
+  if(subs.length){
+    field.style.display="flex";
+    s.innerHTML='<option value="">Select…</option>'+subs.map(c=>`<option>${c}</option>`).join("");
+  } else {field.style.display="none";}
+}
+function closeAddRow(){document.getElementById("add-panel").classList.remove("open");}
+function saveNewRow(){
+  const row={};
+  S.columns.forEach(c=>{const el=document.getElementById("mf-"+c.id);row[c.id]=el?el.value:"";});
+  row.workType=document.getElementById("mf-workType")?.value||"";
+  row.subCat=document.getElementById("mf-subCat")?.value||"";
+  row.subSubCat=document.getElementById("mf-subSubCat")?.value||"";
+  if(!row[S.columns[0].id]){alert("Label / Template is required.");return;}
+  S.rows.push(row);closeAddRow();renderTable();
+}
+
+/* ── ADMIN ── */
+function renderAdmin(){
+  renderAdminWT();renderAdminCols();
+  const s=document.getElementById("subcat-wt-sel"),cur=s.value;
+  s.innerHTML='<option value="">Work type…</option>'+S.workTypes.map(w=>`<option value="${w}"${w===cur?" selected":""}>${w}</option>`).join("");
+  renderSubCatTree();
+}
+
+function renderAdminWT(){
+  const l=document.getElementById("worktype-tag-list");
+  l.innerHTML=S.workTypes.length
+    ?S.workTypes.map((w,i)=>`<div class="tag-item">${w}<button onclick="removeWT(${i})" aria-label="Remove">×</button></div>`).join("")
+    :'<span class="help">No work types yet.</span>';
+  renderWorkTypeSel();
+}
+
+function addWorkType(){
+  const inp=document.getElementById("new-worktype"),v=inp.value.trim();
+  if(!v||S.workTypes.includes(v)){if(v)alert("Already exists.");return;}
+  S.workTypes.push(v);S.subCats[v]={};inp.value="";
+  renderAdminWT();
+  const s=document.getElementById("subcat-wt-sel"),cur=s.value;
+  s.innerHTML='<option value="">Work type…</option>'+S.workTypes.map(w=>`<option value="${w}"${w===cur?" selected":""}>${w}</option>`).join("");
+}
+function removeWT(i){
+  if(!confirm(`Remove "${S.workTypes[i]}"?`))return;
+  const w=S.workTypes[i];S.workTypes.splice(i,1);delete S.subCats[w];
+  renderAdminWT();document.getElementById("subcat-wt-sel").value="";renderSubCatTree();
+}
+
+/* ── SUB CAT TREE (sub + sub-sub) ── */
+function renderSubCatTree(){
+  const wt=document.getElementById("subcat-wt-sel").value;
+  const container=document.getElementById("subcat-tree-container");
+  if(!wt){container.innerHTML='<span class="help">Select a work type above to manage its hierarchy.</span>';return;}
+  const cats=S.subCats[wt]||{};
+  const catNames=Object.keys(cats);
+  if(!catNames.length){container.innerHTML='<span class="help">No sub categories yet. Add one above.</span>';return;}
+  container.innerHTML=`<div class="subcat-tree">
+    ${catNames.map(sc=>`
+      <div class="subcat-node">
+        <div class="subcat-node-header">
+          <i class="ti ti-folder" style="font-size:14px;color:var(--gold)"></i>
+          <span class="subcat-node-label">${sc}</span>
+          <button class="btn-danger-ghost btn-sm" onclick="removeSC('${wt}','${sc}')" title="Remove sub category"><i class="ti ti-trash"></i></button>
+        </div>
+        <div class="subsub-list">
+          ${(cats[sc]||[]).map((ss,si)=>`
+            <div class="subsub-item">
+              <span><i class="ti ti-chevron-right" style="font-size:11px;margin-right:4px;color:rgba(255,255,255,.3)"></i>${ss}</span>
+              <button class="btn-danger-ghost" style="padding:2px 6px;font-size:11px" onclick="removeSubSub('${wt}','${sc}',${si})" title="Remove"><i class="ti ti-x"></i></button>
+            </div>`).join("")}
+          <div class="subsub-add-row">
+            <input id="ss-inp-${wt}-${sc}" placeholder="Add sub-sub category…" onkeydown="if(event.key==='Enter')addSubSub('${wt}','${sc}')"/>
+            <button class="btn btn-teal" style="padding:4px 10px;font-size:12px" onclick="addSubSub('${wt}','${sc}')"><i class="ti ti-plus"></i></button>
+          </div>
+        </div>
+      </div>`).join("")}
+  </div>`;
+}
+
+function addSubCat(){
+  const wt=document.getElementById("subcat-wt-sel").value;
+  const inp=document.getElementById("new-subcat"),v=inp.value.trim();
+  if(!wt){alert("Select a work type first.");return;}
+  if(!v)return;
+  if(!S.subCats[wt])S.subCats[wt]={};
+  if(S.subCats[wt][v]){alert("Already exists.");return;}
+  S.subCats[wt][v]=[];inp.value="";renderSubCatTree();
+}
+function removeSC(wt,sc){
+  if(!confirm(`Remove sub category "${sc}"?`))return;
+  delete S.subCats[wt][sc];renderSubCatTree();
+}
+function addSubSub(wt,sc){
+  const inp=document.getElementById(`ss-inp-${wt}-${sc}`);
+  const v=inp?.value.trim();if(!v)return;
+  if(!S.subCats[wt])S.subCats[wt]={};
+  if(!S.subCats[wt][sc])S.subCats[wt][sc]=[];
+  if(S.subCats[wt][sc].includes(v)){alert("Already exists.");return;}
+  S.subCats[wt][sc].push(v);renderSubCatTree();
+}
+function removeSubSub(wt,sc,i){
+  if(!confirm(`Remove sub-sub category "${S.subCats[wt][sc][i]}"?`))return;
+  S.subCats[wt][sc].splice(i,1);renderSubCatTree();
+}
+
+function renderAdminCols(){
+  document.getElementById("col-list").innerHTML=S.columns.map((c,i)=>`
+    <div class="col-row">
+      <span><span class="cn">${c.label}</span><span class="ct">${c.type}</span></span>
+      <button class="btn-danger-ghost btn-sm" onclick="removeCol(${i})"><i class="ti ti-trash"></i> Remove</button>
+    </div>`).join("");
+}
+function addColumn(){
+  const label=document.getElementById("new-col-label").value.trim();
+  const type=document.getElementById("new-col-type").value;
+  if(!label){alert("Enter a column label.");return;}
+  S.columns.push({id:"col_"+label.toLowerCase().replace(/\s+/g,"_")+"_"+Date.now(),label,type});
+  document.getElementById("new-col-label").value="";
+  renderAdminCols();renderTable();
+}
+function removeCol(i){
+  if(!confirm(`Remove column "${S.columns[i].label}"?`))return;
+  S.columns.splice(i,1);renderAdminCols();renderTable();
+}
+
+/* ── EXPORT ── */
+function exportExcel(){doExport(S.rows,"TEM_Dashboard_All");}
+function exportCurrentView(){
+  const rows=getFiltered();
+  if(!rows.length){showToast("No rows to export.","error");return;}
+  doExport(rows,"TEM_"+(S.selectedSubSubCat||S.selectedSubCat||S.selectedWorkType||"All").replace(/[^a-zA-Z0-9]/g,"_"));
+}
+function doExport(rows,filename){
+  if(!rows.length){showToast("Nothing to export.","error");return;}
+  const XLSX=window.XLSX;if(!XLSX){showToast("SheetJS not loaded.","error");return;}
+  const headers=["Work Type","Sub Category","Sub-Sub Category",...S.columns.map(c=>c.label)];
+  const colIds=["workType","subCat","subSubCat",...S.columns.map(c=>c.id)];
+  const wsData=[headers,...rows.map(r=>colIds.map(id=>r[id]||""))];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  const range=XLSX.utils.decode_range(ws["!ref"]);
+  for(let C=range.s.c;C<=range.e.c;C++){
+    const addr=XLSX.utils.encode_cell({r:0,c:C});
+    if(!ws[addr])continue;
+    ws[addr].s={font:{bold:true,color:{rgb:"FFFFFF"},sz:11},fill:{patternType:"solid",fgColor:{rgb:"0D5E6E"}},alignment:{horizontal:"center",vertical:"center"}};
+  }
+  ws["!cols"]=headers.map((h,i)=>{const ml=Math.max(h.length,...rows.map(r=>(r[colIds[i]]||"").toString().length));return{wch:Math.min(Math.max(ml+2,10),40)};});
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"TEM Codes");
+  const sum=XLSX.utils.aoa_to_sheet([["Export Date",new Date().toLocaleDateString()],["Total Rows",rows.length],["Work Type",S.selectedWorkType||"All"],["Sub Category",S.selectedSubCat||"All"],["Sub-Sub Category",S.selectedSubSubCat||"All"]]);
+  sum["!cols"]=[{wch:22},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,sum,"Export Info");
+  XLSX.writeFile(wb,filename+"_"+new Date().toISOString().slice(0,10)+".xlsx");
+  showToast("Exported "+rows.length+" rows to Excel");
+}
+
+/* ── IMPORT ── */
+let _pendingImport=null;
+function toggleDropZone(){
+  const dz=document.getElementById("drop-zone");
+  if(!dz.classList.toggle("open")){document.getElementById("import-preview").classList.remove("open");_pendingImport=null;}
+}
+function onDragOver(e){e.preventDefault();document.getElementById("drop-zone").classList.add("drag-over");}
+function onDragLeave(){document.getElementById("drop-zone").classList.remove("drag-over");}
+function onDrop(e){e.preventDefault();document.getElementById("drop-zone").classList.remove("drag-over");const f=e.dataTransfer.files[0];if(f)processFile(f);}
+function handleFileSelect(e){const f=e.target.files[0];if(f)processFile(f);e.target.value="";}
+function processFile(file){
+  const XLSX=window.XLSX;if(!XLSX){showToast("SheetJS not loaded.","error");return;}
+  const ext=file.name.split(".").pop().toLowerCase();
+  if(!["xlsx","xls","csv"].includes(ext)){showToast("Only .xlsx,.xls,.csv supported.","error");return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array",cellDates:true});
+      const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+      if(!json.length){showToast("File is empty.","error");return;}
+      const fh=Object.keys(json[0]),colMap={};
+      S.columns.forEach(c=>{const m=fh.find(h=>h.toLowerCase()===c.label.toLowerCase()||h.toLowerCase()===c.id.toLowerCase());if(m)colMap[m]=c.id;});
+      ["workType","subCat","subSubCat","Work Type","Sub Category","Sub-Sub Category"].forEach(k=>{
+        const m=fh.find(h=>h.toLowerCase()===k.toLowerCase());
+        if(m)colMap[m]=k==="Work Type"?"workType":k==="Sub Category"?"subCat":k==="Sub-Sub Category"?"subSubCat":k;
+      });
+      const importedRows=json.map(row=>{const r={};Object.entries(row).forEach(([h,v])=>{const id=colMap[h];if(id)r[id]=v!=null?String(v):"";});return r;}).filter(r=>r[S.columns[0].id]);
+      _pendingImport={rows:importedRows,fileName:file.name,count:importedRows.length};
+      const p=document.getElementById("import-preview"),info=document.getElementById("import-info");
+      info.innerHTML=`File: <strong>${file.name}</strong> &bull; <strong>${importedRows.length} rows</strong> found`;
+      p.classList.add("open");
+    }catch(err){showToast("Failed: "+err.message,"error");}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function confirmImport(mode){
+  if(!_pendingImport)return;
+  if(mode==="replace")S.rows=_pendingImport.rows;else S.rows=[...S.rows,..._pendingImport.rows];
+  showToast((mode==="replace"?"Replaced":"Appended")+" "+_pendingImport.count+" rows");
+  cancelImport();renderTable();
+}
+function cancelImport(){
+  _pendingImport=null;
+  document.getElementById("import-preview").classList.remove("open");
+  document.getElementById("drop-zone").classList.remove("open");
+}
+
+/* ── TOAST ── */
+let _tt=null;
+function showToast(msg,type="success"){
+  let t=document.getElementById("_toast");
+  if(!t){t=document.createElement("div");t.id="_toast";t.className="toast";document.body.appendChild(t);}
+  t.className="toast"+(type==="error"?" error":"");
+  t.innerHTML=`<i class="ti ti-${type==="error"?"alert-circle":"circle-check"}" style="font-size:16px"></i> ${msg}`;
+  t.classList.add("show");clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove("show"),3500);
+}
+
+/* ── INIT ── */
+renderWorkTypeSel();renderSubCatSel("");renderTable();
+</script>
+</body>
+</html>
